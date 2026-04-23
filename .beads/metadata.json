@@ -1,7 +1,7 @@
 {
   "database": "dolt",
   "backend": "dolt",
-  "dolt_mode": "server",
+  "dolt_mode": "embedded",
   "dolt_database": "nexus_serde",
   "project_id": "8ca8b09f-0a44-473a-8920-d62d997783c9",
   "global_dolt_database": "beads_global"
