@@ -172,6 +172,8 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         match self.stream.expect_next()? {
             Token::Str(s) => visitor.visit_string(s),
+            // Bare-identifier form (mirrors nota-serde).
+            Token::Ident(s) => visitor.visit_string(s),
             other => Err(Error::Custom(format!("expected string, got {other:?}"))),
         }
     }

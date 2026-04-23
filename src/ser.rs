@@ -24,6 +24,23 @@ pub struct Serializer {
     output: String,
 }
 
+/// Mirrors nota-serde's bare-string rule: ident-shaped non-reserved
+/// content emits without `[ ]` delimiters.
+fn is_bare_string_eligible(v: &str) -> bool {
+    if v.is_empty() {
+        return false;
+    }
+    if matches!(v, "true" | "false" | "None") {
+        return false;
+    }
+    let mut chars = v.chars();
+    let first = chars.next().expect("checked non-empty above");
+    if !(first.is_ascii_alphabetic() || first == '_') {
+        return false;
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 impl Serializer {
     fn append(&mut self, s: &str) {
         self.output.push_str(s);
@@ -32,6 +49,12 @@ impl Serializer {
     fn write_str_literal(&mut self, v: &str) -> Result<()> {
         if v.contains("|]") {
             return Err(Error::StringContainsMultilineCloser);
+        }
+        // Bare-identifier form (mirrors nota-serde): emit an
+        // ident-class, non-reserved string without delimiters.
+        if is_bare_string_eligible(v) {
+            self.output.push_str(v);
+            return Ok(());
         }
         let needs_multiline = v.contains(']') || v.contains('\n');
         if needs_multiline {
@@ -158,12 +181,15 @@ impl<'a> ser::Serializer for &'a mut Serializer {
                 let mut sub = Serializer { output: String::new() };
                 value.serialize(&mut sub)?;
                 let s = sub.output;
-                if !(s.starts_with('[') && s.ends_with(']')) {
-                    return Err(Error::Custom(format!(
-                        "Bind inner must serialize as a string, got {s:?}"
-                    )));
-                }
-                let inner = &s[1..s.len() - 1];
+                // Inner may come through bare (canonical for ident-
+                // shaped strings) or `[name]` (bracketed form). Strip
+                // the brackets if present so validation sees just the
+                // content.
+                let inner = if s.starts_with('[') && s.ends_with(']') && s.len() >= 2 {
+                    &s[1..s.len() - 1]
+                } else {
+                    s.as_str()
+                };
                 // Bind names must follow the camelCase or kebab-case
                 // identifier classes: first char lowercase or `_`,
                 // body in [a-z0-9_-]. No uppercase (reserved for
@@ -436,7 +462,11 @@ mod tests {
         assert_eq!(to_string(&2.5f64).unwrap(), "2.5");
         assert_eq!(to_string(&1.0f64).unwrap(), "1.0");
         assert_eq!(to_string(&-0.5f32).unwrap(), "-0.5");
-        assert_eq!(to_string("hello").unwrap(), "[hello]");
+        assert_eq!(to_string("hello").unwrap(), "hello");
+        assert_eq!(to_string("kebab-name").unwrap(), "kebab-name");
+        assert_eq!(to_string("true").unwrap(), "[true]");
+        assert_eq!(to_string("None").unwrap(), "[None]");
+        assert_eq!(to_string("hello world").unwrap(), "[hello world]");
     }
 
     #[test]
@@ -523,7 +553,7 @@ mod tests {
     #[test]
     fn tuple() {
         let t = (1i32, "a", true);
-        assert_eq!(to_string(&t).unwrap(), "<1 [a] true>");
+        assert_eq!(to_string(&t).unwrap(), "<1 a true>");
     }
 
     #[test]
@@ -560,9 +590,7 @@ mod tests {
         let mut m = BTreeMap::new();
         m.insert("beta", 2);
         m.insert("alpha", 1);
-        // BTreeMap iterates in key order, but nota sorts by serialized-key
-        // bytes, which for [alpha] / [beta] matches the lexicographic order.
-        assert_eq!(to_string(&m).unwrap(), "<([alpha] 1) ([beta] 2)>");
+        assert_eq!(to_string(&m).unwrap(), "<(alpha 1) (beta 2)>");
     }
 
     #[test]
@@ -572,11 +600,9 @@ mod tests {
         m.insert("zeta", 26);
         m.insert("alpha", 1);
         m.insert("mu", 12);
-        // HashMap iteration order is non-deterministic; canonical form
-        // must still emit in sorted-by-serialized-key order.
         assert_eq!(
             to_string(&m).unwrap(),
-            "<([alpha] 1) ([mu] 12) ([zeta] 26)>"
+            "<(alpha 1) (mu 12) (zeta 26)>"
         );
     }
 

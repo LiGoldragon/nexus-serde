@@ -117,7 +117,8 @@ fn nota_subset_roundtrip() {
         flags: vec!["debug".into(), "verbose".into()],
     };
     let text = to_string(&c).unwrap();
-    assert_eq!(text, "(Config [server] 8080 <[debug] [verbose]>)");
+    // Ident-shaped strings emit bare (inherited from nota-serde rules).
+    assert_eq!(text, "(Config server 8080 <debug verbose>)");
     let back: Config = from_str(&text).unwrap();
     assert_eq!(back, c);
 }
