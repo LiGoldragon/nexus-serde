@@ -164,11 +164,21 @@ impl<'a> ser::Serializer for &'a mut Serializer {
                     )));
                 }
                 let inner = &s[1..s.len() - 1];
-                if inner.is_empty()
-                    || inner.chars().any(|c| !(c.is_ascii_alphanumeric() || c == '-' || c == '_'))
-                {
+                // Bind names must follow the camelCase or kebab-case
+                // identifier classes: first char lowercase or `_`,
+                // body in [a-z0-9_-]. No uppercase (reserved for
+                // PascalCase types) and no leading digit or `-`.
+                let mut chars = inner.chars();
+                let first_ok = matches!(
+                    chars.next(),
+                    Some(c) if c.is_ascii_lowercase() || c == '_'
+                );
+                let rest_ok = chars.all(
+                    |c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_'
+                );
+                if !first_ok || !rest_ok {
                     return Err(Error::Custom(format!(
-                        "Bind name must be identifier-shaped (alnum / - / _), got {inner:?}"
+                        "Bind name must be camelCase or kebab-case (first char `[a-z_]`, body `[a-z0-9_-]`), got {inner:?}"
                     )));
                 }
                 self.output.push('@');

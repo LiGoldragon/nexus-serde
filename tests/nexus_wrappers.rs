@@ -31,6 +31,42 @@ fn bind_rejects_invalid_chars() {
 }
 
 #[test]
+fn bind_rejects_leading_digit() {
+    // Digits can appear in the body but not at the start — reserves
+    // numeric-first for integer literals.
+    let b = Bind("123foo".into());
+    assert!(to_string(&b).is_err());
+}
+
+#[test]
+fn bind_rejects_leading_hyphen() {
+    // `-` is valid inside kebab-case but not as the first char.
+    let b = Bind("-foo".into());
+    assert!(to_string(&b).is_err());
+}
+
+#[test]
+fn bind_rejects_uppercase() {
+    // PascalCase-shaped names are reserved for types and variants;
+    // a bind hole can't take that form.
+    let b = Bind("Foo".into());
+    assert!(to_string(&b).is_err());
+    let b = Bind("fooBar".into());
+    assert!(to_string(&b).is_err());
+}
+
+#[test]
+fn bind_accepts_leading_underscore() {
+    // Per the nota spec (identifier classes), a leading `_` counts
+    // as camelCase-kindred — matches Rust's convention for
+    // "nominally-private" field names.
+    let b = Bind("_private".into());
+    assert_eq!(to_string(&b).unwrap(), "@_private");
+    let back: Bind = from_str("@_private").unwrap();
+    assert_eq!(back, b);
+}
+
+#[test]
 fn mutate_around_struct() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Point { horizontal: f64, vertical: f64 }
