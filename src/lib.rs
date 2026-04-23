@@ -20,17 +20,18 @@
 //! #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 //! struct Point { horizontal: f64, vertical: f64 }
 //!
-//! // Plain assertion — identical to nota.
+//! // Plain assertion — identical to nota. Records are positional;
+//! // field names live in the Rust schema, not the text.
 //! let p = Point { horizontal: 3.0, vertical: 4.0 };
 //! assert_eq!(
 //!     nexus_serde::to_string(&p)?,
-//!     "(Point horizontal=3.0 vertical=4.0)"
+//!     "(Point 3.0 4.0)"
 //! );
 //!
 //! // Mutation marker.
 //! assert_eq!(
 //!     nexus_serde::to_string(&Mutate(p))?,
-//!     "~(Point horizontal=3.0 vertical=4.0)"
+//!     "~(Point 3.0 4.0)"
 //! );
 //!
 //! // Negation.

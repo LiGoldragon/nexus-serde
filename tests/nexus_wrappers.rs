@@ -36,7 +36,7 @@ fn mutate_around_struct() {
     struct Point { horizontal: f64, vertical: f64 }
     let m = Mutate(Point { horizontal: 3.0, vertical: 4.0 });
     let text = to_string(&m).unwrap();
-    assert_eq!(text, "~(Point horizontal=3.0 vertical=4.0)");
+    assert_eq!(text, "~(Point 3.0 4.0)");
     let back: Mutate<Point> = from_str(&text).unwrap();
     assert_eq!(back, m);
 }
@@ -81,7 +81,7 @@ fn nota_subset_roundtrip() {
         flags: vec!["debug".into(), "verbose".into()],
     };
     let text = to_string(&c).unwrap();
-    assert_eq!(text, "(Config name=[server] port=8080 flags=<[debug] [verbose]>)");
+    assert_eq!(text, "(Config [server] 8080 <[debug] [verbose]>)");
     let back: Config = from_str(&text).unwrap();
     assert_eq!(back, c);
 }
@@ -110,7 +110,7 @@ fn new_delimiters_tokenize() {
     // Valid nexus text containing a pattern — but the user asked for a
     // plain struct, so the deserializer should reject this at the
     // parser level (expected `(`, got `(|`), not crash in the lexer.
-    let result: nexus_serde::Result<Point> = from_str("(| Point horizontal=@h |)");
+    let result: nexus_serde::Result<Point> = from_str("(| Point @horizontal |)");
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
     assert!(

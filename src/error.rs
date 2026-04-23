@@ -17,6 +17,12 @@ pub enum Error {
 
     #[error("serialize_value called before serialize_key in map")]
     MapValueWithoutKey,
+
+    #[error("multi-field unnamed struct `{name}` (len {len}) — nota/nexus requires named-field structs; use `struct {name} {{ … }}` instead of `struct {name}(…, …)`")]
+    MultiFieldTupleStructForbidden {
+        name: &'static str,
+        len: usize,
+    },
 }
 
 impl serde::ser::Error for Error {
