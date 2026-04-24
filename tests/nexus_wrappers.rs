@@ -158,18 +158,12 @@ fn new_delimiters_tokenize() {
 
 mod char_tests {
     use nexus_serde::{from_str, to_string};
-    use serde::{Deserialize, Serialize};
 
     #[test]
     fn char_roundtrip_nexus() {
-        // Same issue should occur in nexus-serde
         let original = 'a';
         let text = to_string(&original).unwrap();
-        println!("char serialized as: {:?}", text);
-        let back: Result<char, _> = from_str(&text);
-        println!("Result: {:?}", back);
-        // This will fail with the same error
-        assert!(back.is_ok(), "char round-trip failed");
-        assert_eq!(back.unwrap(), original);
+        let back: char = from_str(&text).unwrap();
+        assert_eq!(back, original);
     }
 }
