@@ -5,8 +5,11 @@ edition      = "2024"
 rust-version = "1.85"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/nexus-serde"
-description  = "serde Serializer + Deserializer for the nexus messaging protocol (superset of nota)"
+description  = "serde Serializer + Deserializer for the nexus messaging protocol — public façade over nota-serde-core"
 
 [dependencies]
+nota-serde-core = { git = "https://github.com/LiGoldragon/nota-serde-core.git" }
 serde = { version = "1", features = ["derive"] }
-thiserror = "2"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
