@@ -28,10 +28,10 @@ struct Point { horizontal: f64, vertical: f64 }
 let p = Point { horizontal: 3.0, vertical: 4.0 };
 
 // Assert
-let s = nexus_serde::to_string(&p)?;                    // (Point horizontal=3.0 vertical=4.0)
+let s = nexus_serde::to_string(&p)?;                    // (Point 3.0 4.0)
 
 // Mutate
-let s = nexus_serde::to_string(&Mutate(p))?;           // ~(Point horizontal=3.0 vertical=4.0)
+let s = nexus_serde::to_string(&Mutate(p))?;           // ~(Point 3.0 4.0)
 
 // Bind hole
 let b = Bind("h".into());

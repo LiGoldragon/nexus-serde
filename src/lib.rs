@@ -15,12 +15,9 @@
 //! - [`Mutate<T>`] — `~`-prefixed mutation marker. `Mutate(x)` → `~<x>`.
 //! - [`Negate<T>`] — `!`-prefixed negation. `Negate(x)` → `!<x>`.
 //!
-//! Pattern / Constrain / Shape containers (`(| |)`, `{| |}`, `{ }`) —
-//! and the Tier-1 additions from
-//! [mentci reports/013](https://github.com/LiGoldragon/mentci/blob/main/reports/013-nexus-syntax-proposal.md)
-//! (`<| |>` stream, `(|| ||)` optional pattern, `{|| ||}` atomic txn)
-//! — are recognised by the lexer but not yet mapped to wrapper
-//! types. Their Rust-type design is deferred to the consumer crates
+//! Pattern / Constrain / Shape containers (`(| |)`, `{| |}`, `{ }`)
+//! are recognised by the lexer but not yet mapped to wrapper types.
+//! Their Rust-type design is deferred to the consumer crates
 //! (nexusd, nexus-cli) which will define message types against the
 //! grammar.
 //!
