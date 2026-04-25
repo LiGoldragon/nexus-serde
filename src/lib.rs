@@ -17,7 +17,7 @@
 //!
 //! Pattern / Constrain / Shape containers (`(| |)`, `{| |}`, `{ }`) —
 //! and the Tier-1 additions from
-//! [mentci-next reports/013](https://github.com/LiGoldragon/mentci-next/blob/main/reports/013-nexus-syntax-proposal.md)
+//! [mentci reports/013](https://github.com/LiGoldragon/mentci/blob/main/reports/013-nexus-syntax-proposal.md)
 //! (`<| |>` stream, `(|| ||)` optional pattern, `{|| ||}` atomic txn)
 //! — are recognised by the lexer but not yet mapped to wrapper
 //! types. Their Rust-type design is deferred to the consumer crates
