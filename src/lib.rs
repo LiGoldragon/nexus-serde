@@ -9,11 +9,14 @@
 //!
 //! nexus is a strict superset of [nota](https://github.com/LiGoldragon/nota).
 //! Round-trips every nota value identically and additionally handles
-//! three query-layer wrapper types:
+//! six query-layer wrapper types:
 //!
 //! - [`Bind`] — a `@`-prefixed bind hole. `Bind("h".into())` → `@h`.
-//! - [`Mutate<T>`] — `~`-prefixed mutation marker. `Mutate(x)` → `~<x>`.
-//! - [`Negate<T>`] — `!`-prefixed negation. `Negate(x)` → `!<x>`.
+//! - [`Mutate<T>`] — `~`-prefixed mutation marker. `Mutate(record)` → `~(record …)`.
+//! - [`Negate<T>`] — `!`-prefixed retraction. `Negate(record)` → `!(record …)`.
+//! - [`Validate<T>`] — `?`-prefixed dry-run. `Validate(record)` → `?(record …)`.
+//! - [`Subscribe<T>`] — `*`-prefixed continuous query. `Subscribe(pattern)` → `*(…)`.
+//! - [`AtomicBatch<T>`] — `[| |]`-wrapped all-or-nothing edit list.
 //!
 //! Pattern / Constrain / Shape containers (`(| |)`, `{| |}`, `{ }`)
 //! are recognised by the lexer but not yet mapped to wrapper types.
@@ -69,3 +72,22 @@ pub struct Mutate<T>(pub T);
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename = "@NexusNegate")]
 pub struct Negate<T>(pub T);
+
+/// Marks a verb as dry-run — `?value`. The daemon evaluates the
+/// request and returns the would-be result without committing.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename = "@NexusValidate")]
+pub struct Validate<T>(pub T);
+
+/// Marks a pattern as a continuous subscription — `*pattern`.
+/// The first reply is a snapshot; further matches stream as events.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename = "@NexusSubscribe")]
+pub struct Subscribe<T>(pub T);
+
+/// Wraps a sequence of edit operations that must apply atomically —
+/// `[| op1 op2 … |]`. Each inner operation carries its own verb
+/// sigil; the batch succeeds only if every operation succeeds.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename = "@NexusAtomicBatch")]
+pub struct AtomicBatch<T>(pub T);

@@ -1,8 +1,11 @@
-//! Tests for the three nexus-layer wrapper types: `Bind`, `Mutate<T>`,
-//! `Negate<T>`. Also exercises that the nota-subset still roundtrips
-//! unchanged through the nexus serializer.
+//! Tests for the six nexus-layer wrapper types: `Bind`, `Mutate<T>`,
+//! `Negate<T>`, `Validate<T>`, `Subscribe<T>`, `AtomicBatch<T>`. Also
+//! exercises that the nota-subset still roundtrips unchanged through
+//! the nexus serializer.
 
-use nexus_serde::{from_str, to_string, Bind, Mutate, Negate};
+use nexus_serde::{
+    from_str, to_string, AtomicBatch, Bind, Mutate, Negate, Subscribe, Validate,
+};
 use serde::{Deserialize, Serialize};
 
 #[test]
@@ -118,9 +121,45 @@ fn nota_subset_roundtrip() {
     };
     let text = to_string(&c).unwrap();
     // Ident-shaped strings emit bare (inherited from nota-serde rules).
-    assert_eq!(text, "(Config server 8080 <debug verbose>)");
+    assert_eq!(text, "(Config server 8080 [debug verbose])");
     let back: Config = from_str(&text).unwrap();
     assert_eq!(back, c);
+}
+
+#[test]
+fn validate_around_struct() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Point { horizontal: f64, vertical: f64 }
+    let v = Validate(Point { horizontal: 3.0, vertical: 4.0 });
+    let text = to_string(&v).unwrap();
+    assert_eq!(text, "?(Point 3.0 4.0)");
+    let back: Validate<Point> = from_str(&text).unwrap();
+    assert_eq!(back, v);
+}
+
+#[test]
+fn subscribe_around_record() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Node { id: String, label: String }
+    let s = Subscribe(Node { id: "u".into(), label: "User".into() });
+    let text = to_string(&s).unwrap();
+    assert_eq!(text, "*(Node u User)");
+    let back: Subscribe<Node> = from_str(&text).unwrap();
+    assert_eq!(back, s);
+}
+
+#[test]
+fn atomic_batch_of_mutates() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Node { id: String, label: String }
+    let batch = AtomicBatch(vec![
+        Mutate(Node { id: "a".into(), label: "Apple".into() }),
+        Mutate(Node { id: "b".into(), label: "Banana".into() }),
+    ]);
+    let text = to_string(&batch).unwrap();
+    assert_eq!(text, "[| ~(Node a Apple) ~(Node b Banana) |]");
+    let back: AtomicBatch<Vec<Mutate<Node>>> = from_str(&text).unwrap();
+    assert_eq!(back, batch);
 }
 
 #[test]
@@ -165,5 +204,139 @@ mod char_tests {
         let text = to_string(&original).unwrap();
         let back: char = from_str(&text).unwrap();
         assert_eq!(back, original);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Additional coverage for the new wrappers.
+
+mod validate {
+    use super::*;
+
+    #[test]
+    fn validate_around_int() {
+        let v = Validate(5i32);
+        let text = to_string(&v).unwrap();
+        assert_eq!(text, "?5");
+        let back: Validate<i32> = from_str(&text).unwrap();
+        assert_eq!(back, v);
+    }
+
+    #[test]
+    fn validate_around_unit_variant() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        enum Status { Pending }
+        let v = Validate(Status::Pending);
+        assert_eq!(to_string(&v).unwrap(), "?Pending");
+        let back: Validate<Status> = from_str("?Pending").unwrap();
+        assert_eq!(back, v);
+    }
+
+    #[test]
+    fn validate_around_string() {
+        let v = Validate("hello".to_string());
+        assert_eq!(to_string(&v).unwrap(), "?hello");
+        let back: Validate<String> = from_str("?hello").unwrap();
+        assert_eq!(back, v);
+    }
+}
+
+mod subscribe {
+    use super::*;
+
+    #[test]
+    fn subscribe_around_int() {
+        let v = Subscribe(7i32);
+        let text = to_string(&v).unwrap();
+        assert_eq!(text, "*7");
+        let back: Subscribe<i32> = from_str(&text).unwrap();
+        assert_eq!(back, v);
+    }
+
+    #[test]
+    fn subscribe_around_unit_variant() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        enum Status { Live }
+        let v = Subscribe(Status::Live);
+        assert_eq!(to_string(&v).unwrap(), "*Live");
+        let back: Subscribe<Status> = from_str("*Live").unwrap();
+        assert_eq!(back, v);
+    }
+}
+
+mod atomic_batch {
+    use super::*;
+
+    #[test]
+    fn empty_atomic_batch() {
+        let b: AtomicBatch<Vec<i32>> = AtomicBatch(vec![]);
+        let text = to_string(&b).unwrap();
+        assert_eq!(text, "[||]");
+        let back: AtomicBatch<Vec<i32>> = from_str(&text).unwrap();
+        assert_eq!(back, b);
+    }
+
+    #[test]
+    fn atomic_batch_of_ints() {
+        let b = AtomicBatch(vec![1, 2, 3]);
+        let text = to_string(&b).unwrap();
+        assert_eq!(text, "[| 1 2 3 |]");
+        let back: AtomicBatch<Vec<i32>> = from_str(&text).unwrap();
+        assert_eq!(back, b);
+    }
+
+    #[test]
+    fn atomic_batch_with_negate_and_mutate() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        struct Node { id: String, label: String }
+        // Three different verbs in one batch — each item carries its
+        // own sigil; the batch is heterogeneous in sigil but
+        // homogeneous in T at the type level. To mix verbs in serde,
+        // we wrap each item the same way — here all are Mutate.
+        let b = AtomicBatch(vec![
+            Mutate(Node { id: "a".into(), label: "Apple".into() }),
+            Mutate(Node { id: "b".into(), label: "Banana".into() }),
+            Mutate(Node { id: "c".into(), label: "Cherry".into() }),
+        ]);
+        let text = to_string(&b).unwrap();
+        assert_eq!(
+            text,
+            "[| ~(Node a Apple) ~(Node b Banana) ~(Node c Cherry) |]"
+        );
+        let back: AtomicBatch<Vec<Mutate<Node>>> = from_str(&text).unwrap();
+        assert_eq!(back, b);
+    }
+}
+
+mod nested_wrappers {
+    use super::*;
+
+    #[test]
+    fn validate_of_mutate() {
+        let v = Validate(Mutate(7i32));
+        let text = to_string(&v).unwrap();
+        assert_eq!(text, "?~7");
+        let back: Validate<Mutate<i32>> = from_str(&text).unwrap();
+        assert_eq!(back, v);
+    }
+
+    #[test]
+    fn subscribe_of_negate() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        enum Status { Active }
+        let v = Subscribe(Negate(Status::Active));
+        let text = to_string(&v).unwrap();
+        assert_eq!(text, "*!Active");
+        let back: Subscribe<Negate<Status>> = from_str(&text).unwrap();
+        assert_eq!(back, v);
+    }
+
+    #[test]
+    fn validate_of_atomic_batch() {
+        let v = Validate(AtomicBatch(vec![1, 2, 3]));
+        let text = to_string(&v).unwrap();
+        assert_eq!(text, "?[| 1 2 3 |]");
+        let back: Validate<AtomicBatch<Vec<i32>>> = from_str(&text).unwrap();
+        assert_eq!(back, v);
     }
 }

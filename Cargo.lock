@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "nota-serde-core"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/nota-serde-core.git#df962b37f2422ee532ed67cb62ef3ec0cc38bcd5"
+source = "git+https://github.com/LiGoldragon/nota-serde-core.git?rev=0a7a047b51f782ac851e2d895430becf612aad33#0a7a047b51f782ac851e2d895430becf612aad33"
 dependencies = [
  "serde",
  "thiserror",
