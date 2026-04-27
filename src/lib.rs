@@ -19,10 +19,11 @@
 //! - [`AtomicBatch<T>`] — `[| |]`-wrapped all-or-nothing edit list.
 //!
 //! Pattern / Constrain / Shape containers (`(| |)`, `{| |}`, `{ }`)
-//! are recognised by the lexer but not yet mapped to wrapper types.
-//! Their Rust-type design is deferred to the consumer crates
-//! (nexusd, nexus-cli) which will define message types against the
-//! grammar.
+//! are recognised by the lexer but not mapped to serde wrapper
+//! types — patterns are parsed by the nexus daemon's
+//! [`QueryParser`](https://github.com/LiGoldragon/nexus/blob/main/src/parse.rs)
+//! directly into typed `signal::QueryOp` values, bypassing serde's
+//! enum-by-name dispatch.
 //!
 //! ```
 //! use nexus_serde::{Bind, Mutate, Negate};
